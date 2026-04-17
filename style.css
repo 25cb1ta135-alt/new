@@ -1,0 +1,81 @@
+:root {
+    --primary: #4f46e5;
+    --secondary: #818cf8;
+    --dark: #0f172a;
+    --success: #10b981;
+    --danger: #f43f5e;
+    --glass: rgba(255, 255, 255, 0.9);
+    --border: #e2e8f0;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: #f8fafc; /* Changed from black to be more readable */
+    margin: 0;
+    color: var(--dark);
+}
+
+.navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    height: 70px;
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+}
+
+.nav-container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+.logo span { color: var(--dark); }
+
+.nav-links { list-style: none; display: flex; gap: 25px; align-items: center; }
+.nav-links a { text-decoration: none; color: var(--dark); font-weight: 600; }
+
+.admin-pill { background: var(--dark); color: white; padding: 6px 15px; border-radius: 50px; font-size: 0.8rem; }
+
+.main-content { padding: 100px 20px 40px; max-width: 1200px; margin: 0 auto; }
+
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+button {
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-primary { background: var(--primary); color: white; width: 100%; }
+.btn-secondary { background: var(--dark); color: white; width: 100%; margin-top: 10px;}
+
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th { text-align: left; padding: 15px; background: #f1f5f9; }
+td { padding: 15px; border-bottom: 1px solid var(--border); }

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AttendX | Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --secondary: #818cf8;
+            --dark: #0f172a;
+            --success: #10b981;
+            --danger: #f43f5e;
+            --glass: rgba(255, 255, 255, 0.9);
+            --border: #e2e8f0;
+        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8fafc; margin: 0; color: var(--dark); }
+        .navbar { position: fixed; top: 0; width: 100%; height: 70px; background: var(--glass); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); z-index: 1000; display: flex; align-items: center; }
+        .nav-container { width: 90%; max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+        .logo span { color: var(--dark); }
+        .nav-links { list-style: none; display: flex; gap: 25px; align-items: center; margin: 0; padding: 0; }
+        .nav-links a { text-decoration: none; color: var(--dark); font-weight: 600; }
+        .admin-pill { background: var(--dark); color: white; padding: 6px 15px; border-radius: 50px; font-size: 0.8rem; }
+        .main-content { padding: 100px 20px 40px; max-width: 1200px; margin: 0 auto; }
+        .app-section { display: none; }
+        .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media(max-width: 768px) { .container { grid-template-columns: 1fr; } }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-family: inherit; }
+        button { padding: 12px 24px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; font-family: inherit; }
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-secondary { background: var(--dark); color: white; width: 100%; margin-top: 10px; }
+        .btn-outline { background: transparent; color: var(--dark); border: 2px solid var(--border); width: 100%; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { text-align: left; padding: 15px; background: #f1f5f9; }
+        td { padding: 15px; border-bottom: 1px solid var(--border); }
+        .table-responsive { overflow-x: auto; }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .stat-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
+        .stat-value { font-size: 2rem; font-weight: 800; color: var(--primary); }
+        .auth-card { max-width: 420px; margin: 0 auto; }
+        .student-card { max-width: 500px; margin: 0 auto; }
+        #loading-screen { position: fixed; inset: 0; background: white; display: flex; align-items: center; justify-content: center; z-index: 9999; font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+    </style>
+</head>
+<body>
+
+    <div id="loading-screen">Attend<span style="color:var(--dark)">X</span></div>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">Attend<span>X</span></div>
+            <ul class="nav-links">
+                <li><a href="#" onclick="showSection('teacher-zone'); return false;">Dashboard</a></li>
+                <li><a href="#" onclick="showSection('history-zone'); return false;">History</a></li>
+                <li id="auth-nav-item"><a href="#" onclick="showSection('auth-zone'); return false;">Login</a></li>
+                <li id="logout-nav-item" style="display:none;"><a href="#" onclick="logoutUser(); return false;">Logout</a></li>
+                <li class="admin-pill" id="user-display">Guest</li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-content">
+
+        <!-- TEACHER DASHBOARD -->
+        <section id="teacher-zone" class="app-section">
+            <div class="header-flex">
+                <h1>Session <span style="color:var(--primary)">Dashboard</span></h1>
+                <p>● System Active</p>
+            </div>
+            <div class="container">
+                <div class="card">
+                    <h3>Create New Session</h3>
+                    <input type="text" id="subject" placeholder="Enter Subject Name">
+                    <input type="date" id="session-date">
+                    <button id="generateSessionBtn" class="btn-primary">Generate Attendance QR</button>
+                    <div id="qrcode-display" style="display:none; margin-top:20px; text-align:center;">
+                        <div id="qrcode" style="display:flex; justify-content:center; margin-bottom:10px;"></div>
+                        <button id="downloadQrBtn" class="btn-secondary">Download QR Image</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Quick Stats</h3>
+                    <div class="stat-item">
+                        <span>Total Present (Current Session)</span>
+                        <span class="stat-value" id="count-present">0</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- HISTORY -->
+        <section id="history-zone" class="app-section">
+            <div class="card">
+                <h2>Attendance History</h2>
+                <div class="table-responsive">
+                    <table id="attendancetable">
+                        <thead>
+                            <tr><th>Roll No</th><th>Student Name</th><th>Timestamp</th><th>Status</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <button id="exportBtn" class="btn-outline" style="margin-top:15px;">Download CSV Report</button>
+            </div>
+        </section>
+
+        <!-- STUDENT CHECK-IN -->
+        <section id="student-zone" class="app-section">
+            <div class="card student-card">
+                <h2>Student Check-in</h2>
+                <p id="active-session-name">Waiting for session...</p>
+                <div id="student-input-group">
+                    <input type="text" id="student-name" placeholder="Enter Your Full Name">
+                    <input type="text" id="student-roll" placeholder="Enter Your Roll Number">
+                    <button id="submitAttendanceBtn" class="btn-primary" style="background:var(--success);">Confirm My Presence</button>
+                </div>
+                <div id="confirmation-msg" style="display:none; margin-top:20px; text-align:center;">
+                    <h3 style="color:var(--success);">✅ Attendance Marked!</h3>
+                    <p>You can now close this tab.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- AUTH -->
+        <section id="auth-zone" class="app-section">
+            <div class="card auth-card">
+                <h2 id="auth-title">Account Login</h2>
+                <input type="email" id="auth-email" placeholder="Email Address">
+                <input type="password" id="auth-password" placeholder="Password">
+                <button onclick="handleAuth()" class="btn-primary" id="auth-btn" style="margin-top:10px;">Sign In</button>
+                <p style="margin-top:15px; text-align:center;">
+                    <a href="#" onclick="toggleAuthMode(); return false;" id="auth-toggle-link">Need an account? Register here</a>
+                </p>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // ─── Firebase Init ───────────────────────────────────────────────────────
+        const firebaseConfig = {
+            apiKey: "AIzaSyCBPpRvPqm5i7DKnz14t6-k8VuCor211mU",
+            authDomain: "attendancesystem-ca485.firebaseapp.com",
+            databaseURL: "https://attendancesystem-ca485-default-rtdb.firebaseio.com",
+            projectId: "attendancesystem-ca485",
+            storageBucket: "attendancesystem-ca485.firebasestorage.app",
+            messagingSenderId: "916664297885",
+            appId: "1:916664297885:web:7883b0302cf7475e5a2774"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ─── Navigation ──────────────────────────────────────────────────────────
+        function showSection(id) {
+            document.querySelectorAll('.app-section').forEach(s => s.style.display = 'none');
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'block';
+            if (id === 'history-zone') loadAllHistory();
+        }
+
+        // ─── Auth State Observer ─────────────────────────────────────────────────
+        firebase.auth().onAuthStateChanged((user) => {
+            // Hide loading screen once we know auth state
+            document.getElementById('loading-screen').style.display = 'none';
+
+            const userDisplay  = document.getElementById('user-display');
+            const loginLink    = document.getElementById('auth-nav-item');
+            const logoutLink   = document.getElementById('logout-nav-item');
+
+            if (user) {
+                userDisplay.innerText = user.email.split('@')[0].toUpperCase();
+                loginLink.style.display  = 'none';
+                logoutLink.style.display = 'block';
+
+                // Navigate: if student session URL, go to student zone; else dashboard
+                const params = new URLSearchParams(window.location.search);
+                if (params.has('session')) {
+                    showSection('student-zone');
+                } else {
+                    showSection('teacher-zone');
+                }
+            } else {
+                userDisplay.innerText    = 'GUEST';
+                loginLink.style.display  = 'block';
+                logoutLink.style.display = 'none';
+
+                const params = new URLSearchParams(window.location.search);
+                if (params.has('session')) {
+                    // Students can mark attendance without an account
+                    showSection('student-zone');
+                } else {
+                    showSection('auth-zone');
+                }
+            }
+        });
+
+        // ─── Auth: Login / Register ──────────────────────────────────────────────
+        let isLoginMode = true;
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-title').innerText     = isLoginMode ? 'Account Login'    : 'Create Account';
+            document.getElementById('auth-btn').innerText       = isLoginMode ? 'Sign In'           : 'Register';
+            document.getElementById('auth-toggle-link').innerText = isLoginMode
+                ? 'Need an account? Register here'
+                : 'Have an account? Login here';
+        }
+
+        async function handleAuth() {
+            const email    = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            if (!email || !password) return alert('Please enter both email and password.');
+            try {
+                if (isLoginMode) {
+                    await firebase.auth().signInWithEmailAndPassword(email, password);
+                } else {
+                    await firebase.auth().createUserWithEmailAndPassword(email, password);
+                    alert('Account created! You are now logged in.');
+                }
+                // onAuthStateChanged handles navigation automatically
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        function logoutUser() {
+            firebase.auth().signOut().catch(console.error);
+        }
+
+        // ─── QR Generation ───────────────────────────────────────────────────────
+        let activeSessionID = null;
+
+        document.getElementById('generateSessionBtn').addEventListener('click', () => {
+            if (!firebase.auth().currentUser) {
+                return alert('Access Denied: Please log in as a teacher first.');
+            }
+
+            const subject = document.getElementById('subject').value.trim();
+            const date    = document.getElementById('session-date').value;
+            if (!subject || !date) return alert('Please enter both Subject and Date.');
+
+            activeSessionID = `${subject}_${date}`.replace(/\s+/g, '_');
+            const base      = window.location.origin + window.location.pathname;
+            const url       = `${base}?session=${encodeURIComponent(activeSessionID)}&subject=${encodeURIComponent(subject)}`;
+
+            document.getElementById('qrcode').innerHTML = '';
+            new QRCode(document.getElementById('qrcode'), { text: url, width: 200, height: 200 });
+            document.getElementById('qrcode-display').style.display = 'block';
+            document.getElementById('count-present').innerText = '0';
+            updateLiveStats(activeSessionID);
+        });
+
+        document.getElementById('downloadQrBtn').addEventListener('click', () => {
+            const canvas = document.querySelector('#qrcode canvas');
+            if (!canvas) return;
+            const a = document.createElement('a');
+            a.href     = canvas.toDataURL('image/png');
+            a.download = `QR_${activeSessionID || 'session'}.png`;
+            a.click();
+        });
+
+        // ─── Live Stats ──────────────────────────────────────────────────────────
+        function updateLiveStats(sessionId) {
+            database.ref('history/' + sessionId).on('value', (snap) => {
+                const total = snap.exists() ? Object.keys(snap.val()).length : 0;
+                document.getElementById('count-present').innerText = total;
+            });
+        }
+
+        // ─── Student Mode ────────────────────────────────────────────────────────
+        window.addEventListener('load', () => {
+            const params    = new URLSearchParams(window.location.search);
+            const sessionID = params.get('session');
+            const subject   = params.get('subject');
+            if (sessionID && subject) {
+                document.getElementById('active-session-name').innerText = 'Class: ' + subject;
+            }
+        });
+
+        document.getElementById('submitAttendanceBtn').addEventListener('click', () => {
+            const params    = new URLSearchParams(window.location.search);
+            const sessionID = params.get('session');
+            const name      = document.getElementById('student-name').value.trim();
+            const roll      = document.getElementById('student-roll').value.trim();
+
+            if (!name || !roll) return alert('Please enter your name and roll number.');
+            if (!sessionID)     return alert('No active session found.');
+
+            const user = firebase.auth().currentUser;
+
+            const submit = (uid) => {
+                const ref = database.ref('history/' + sessionID);
+                // Check duplicate by roll number (works even without login)
+                ref.orderByChild('roll').equalTo(roll).once('value', (snap) => {
+                    if (snap.exists()) {
+                        return alert('Attendance already marked for this roll number.');
+                    }
+                    ref.push({ name, roll, uid: uid || 'guest_' + roll, time: new Date().toLocaleTimeString() })
+                        .then(() => {
+                            document.getElementById('student-input-group').style.display = 'none';
+                            document.getElementById('confirmation-msg').style.display    = 'block';
+                        });
+                });
+            };
+
+            submit(user ? user.uid : null);
+        });
+
+        // ─── History ─────────────────────────────────────────────────────────────
+        function loadAllHistory() {
+            const tbody = document.querySelector('#attendancetable tbody');
+            tbody.innerHTML = '';
+            database.ref('history').once('value', (snap) => {
+                snap.forEach((session) => {
+                    session.forEach((student) => {
+                        const d = student.val();
+                        tbody.insertAdjacentHTML('afterbegin', `<tr>
+                            <td>${d.roll}</td>
+                            <td><b>${d.name}</b></td>
+                            <td>${d.time}</td>
+                            <td><span style="color:var(--success)">● Verified</span></td>
+                        </tr>`);
+                    });
+                });
+            });
+        }
+
+        // ─── CSV Export ──────────────────────────────────────────────────────────
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            const rows = document.querySelectorAll('#attendancetable tbody tr');
+            if (!rows.length) return alert('No data to export.');
+            let csv = 'Roll No,Name,Time,Status\n';
+            rows.forEach(r => {
+                csv += Array.from(r.querySelectorAll('td')).map(c => c.innerText).join(',') + '\n';
+            });
+            const a = document.createElement('a');
+            a.href     = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+            a.download = `Attendance_${new Date().toLocaleDateString()}.csv`;
+            a.click();
+        });
+    </script>
+</body>
+</html>
